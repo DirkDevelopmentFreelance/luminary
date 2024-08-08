@@ -18,6 +18,8 @@ type ClientConfig = {
  */
 export const isConnected = ref(false);
 
+export let isCMS = false;
+
 /**
  * Maximum file size for uploads in bytes as a Vue ref
  */
@@ -176,6 +178,8 @@ export function getSocket(options?: socketConnectionOptions) {
             throw new Error("Socket connection requires an API URL");
         }
         if (!options.cms) options.cms = false;
+
+        isCMS = options.cms;
 
         socket = new Socketio(options.apiUrl, options.cms, options.token);
     } else if (options?.reconnect) socket.reconnect();

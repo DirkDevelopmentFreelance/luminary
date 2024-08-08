@@ -18,6 +18,7 @@ import { DateTime } from "luxon";
 import { v4 as uuidv4 } from "uuid";
 import { filterAsync, someAsync } from "../util/asyncArray";
 import { accessMap, getAccessibleGroups } from "../permissions/permissions";
+import { isCMS } from "../socket/socketio";
 
 export type queryOptions = {
     filterOptions?: {
@@ -65,6 +66,7 @@ class database extends Dexie {
     docs!: Table<BaseDocumentDto>;
     localChanges!: Table<Partial<LocalChangeDto>>; // Partial because it includes id which is only set after saving
     private accessMapRef = accessMap;
+    private isCMSMode = isCMS;
 
     constructor() {
         super("luminary-db");
@@ -83,6 +85,11 @@ class database extends Dexie {
             },
             { immediate: true },
         );
+
+        //Check if CMS-mode is not true. If not true delete docs that are expired
+        if (!this.isCMSMode) {
+            this.deleteExpired();
+        }
     }
 
     /**
@@ -624,6 +631,14 @@ class database extends Dexie {
 
                 await revokedDocs.delete();
             });
+    }
+
+    private async deleteExpired() {
+        //Check if today's date is greater than the expiration data, if it is, it means it is expired and should be deleted
+        await this.docs
+            .where("expiryDate")
+            .below(Number.parseInt(new Date().toUTCString()))
+            .delete();
     }
 
     /**
